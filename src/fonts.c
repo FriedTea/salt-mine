@@ -7,28 +7,49 @@
 
 void cozette();
 void jetBrains();
+void nerdFont();
 
-Choice fonts[2] = {
+Choice fonts[3] = {
   {"Cozzete", cozette, 0},
-  {"JetBrains Mono", jetBrains, 0}
+  {"JetBrains Mono", jetBrains, 0},
+  {"Nerd Fonts", nerdFont, 0}
 };
 
 
+void getFont(char *url, char *dir, char *file) {
+	char *font_dir = concat(2, getenv("HOME"), "/.local/share/fonts/");
+	char *filename;
+	int ret;
+
+	mkdirR(font_dir);
+
+
+	if (file != NULL) {
+		filename = strdup(file);
+	}
+	else {
+		lastElement(&filename, url, "/");
+	}
+
+
+	if (dir != NULL) {
+		ret = curlFile(url, concat(3, font_dir, dir, filename));
+	}
+	else {
+		ret = curlFile(url, concat(2, font_dir, filename));
+	}
+
+
+	free(filename);
+}
+
 void cozette() {
 	char *url = "https://github.com/slavfox/Cozette/releases/download/v.1.9.3/CozetteVector.ttf";
-	char *home = getenv("HOME");
-	char *base_path = concat(2, getenv("HOME"), "/.local/share/fonts/");
-	if (mkdirR(base_path))
-		printf("Made directory %s\n", base_path);
-
-	if (curlFile(url, concat(2, base_path, "CozetteVector.ttf")) == 0) {
-		printf("Downloaded CozetteVector.ttf\n");
-	}
+	getFont(url, NULL, NULL);
 }
 
 
 void jetBrains() {
-	char *font_base = "JetBrainsMono-";
 	char *fonts[] = {
 		"JetBrainsMono-Bold.otf",
 		"JetBrainsMono-BoldItalic.otf",
@@ -44,32 +65,23 @@ void jetBrains() {
 		"JetBrainsMono-Thin.otf",
 		"JetBrainsMono-ThinItalic.otf"
 	};
-	int len = sizeof fonts / sizeof *fonts;
-	maxStrLen(max_len, fonts);
-
-	char *base_path = concat(2, getenv("HOME"), "/.local/share/fonts/JetBrainsMono/");
 	char *base_url = "https://github.com/JetBrains/JetBrainsMono/raw/master/fonts/otf/";
-	mkdirR(base_path);
 
 
-	char *url = malloc(strlen(base_url)+max_len);
-	char *path = malloc(strlen(base_path)+max_len);
-	for (int i = 0; i < len; i++) {
-		strcpy(url, base_url);
-		strcat(url, fonts[i]);
-
-		strcpy(path, base_path);
-		strcat(path, fonts[i]);
-
-		curlFile(url, path);
+	for (int i = 0; i < sizeof fonts/sizeof *fonts; i++) {
+		getFont(concat(2, base_url, fonts[i]), "JetBrainsMono", NULL);
 	}
-	free(url);
-	free(path);
+}
+
+
+void nerdFont() {
+	char *license = "https://github.com/ryanoasis/nerd-fonts/raw/master/LICENSE";
+	char *url = "https://github.com/ryanoasis/nerd-fonts/raw/master/src/glyphs/Symbols-1000-em%20Nerd\%20Font\%20Complete.ttf";
+	getFont(url, NULL, "Symbols-1000-em Nerd Font Complete.ttf");
 }
 
 
 int drawFonts(WINDOW *win) {
-	int min_width, min_height;
 	int choice_amount = sizeof fonts / sizeof *fonts;
 	int min_w = getmaxx(win);
 
