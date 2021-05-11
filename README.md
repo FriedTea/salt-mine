@@ -1,4 +1,5 @@
 # Salt Mine
+[Screenshot](./screenshot.png)
 Automatically download my salty dotfiles
 
 
