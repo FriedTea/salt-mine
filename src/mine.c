@@ -52,8 +52,36 @@ int maxChoiceLen(Choice choice[], int choice_amount) {
 }
 
 
+int checkDependencies() {
+	int returned;
+	int depend_size;
+	char *dependencies[] = {
+		"git",
+		"tar",
+		"patch"
+	};
+
+	char *base_error = "is not installed or not able to be accessed";
+	depend_size = sizeof dependencies / sizeof *dependencies;
+
+	returned = 1;
+	for (int i = 0; i < depend_size; i++) {
+		if (system(concat(2, dependencies[i], " &>/dev/null")) != 0) {
+			fprintf(stderr, "%s %s\n", dependencies[i], base_error);
+			returned = 1;
+		}
+	}
+
+	return returned;
+}
+
+
 int main() {
 	int choice_amount;
+
+	if (checkDependencies() == 1) {
+		return 1;
+	}
 
 	Choice main_choice[4] = {
 	  {"Dotfiles", dotfiles, 0},
@@ -70,6 +98,7 @@ int main() {
 
 	WINDOW *win = newwin(0, 0, 0, 0);
 
+	int win_h, win_y;
 	int highlighted = 0;
 	int counter = 0;
 	int input_ret;
