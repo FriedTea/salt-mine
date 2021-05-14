@@ -9,31 +9,31 @@
 
 #define miner_len 22
 const char *miner[] = {
-"      ▄▄▄▄            ",
-"         ██▄          ",
-"        /  █          ",
-"       /   █          ",
-"      /               ",
-"     /     ▄███▄      ",
-"┌───┐     ▄█████▄     ",
-"│ ••│     ████████    ",
-"└───┘   ▄██████████   ",
-" ███  ▄▄████████████▄▄"
+" ▄▄▄▄            ",
+"    ██▄          ",
+"   /  █          ",
+"  /   █          ",
+" /               ",
+"/     ▄███▄      ",
+"     ▄█████▄     ",
+"     ████████    ",
+"   ▄██████████   ",
+" ▄▄████████████▄▄"
 };
 
 
 
 const char *miner2[] = {
-"                      ",
-"                      ",
-"          ▄           ",
-"           █          ",
-"     _______█⁺.       ",
-"┌───┐   ·.  █.█▄      ",
-"│ --│  ⁺.· █⁺███▄     ",
-"└───┘   ⁺·▀.██████    ",
-" ███    ▄██████████   ",
-"      ▄▄████████████▄▄"
+"                 ",
+"                 ",
+"     ▄           ",
+"      █          ",
+"_______█⁺.       ",
+"   ·.  █.█▄      ",
+"  ⁺.· █⁺███▄     ",
+"   ⁺·▀.██████    ",
+"   ▄██████████   ",
+" ▄▄████████████▄▄"
 };
 
 
@@ -190,6 +190,33 @@ int drawChoices(WINDOW *win, Choice *choice, int choice_amount, int *highlighted
 }
 
 
+void drawSalt(int amount) {
+	char *particles[] = {
+		"·",
+		".",
+		"•"
+
+	};
+	int particle;
+
+	int scr_h, scr_w;
+	int x, y;
+
+	getmaxyx(stdscr, scr_h, scr_w);
+
+	time_t t;
+	srand((unsigned) time(&t));
+
+	for (int i = 0; i < amount; i++) {
+		x = rand() % scr_w;
+		y = rand() % scr_w;
+		particle = rand() % (sizeof particles / sizeof *particles);
+
+		mvprintw(y, x, particles[particle]);
+	}
+}
+
+
 int handleInput(WINDOW *win, Choice *choice, int choice_amount, int *highlighted) {
 	int selected_all = 1;
 	int input;
@@ -271,24 +298,6 @@ int handleInput(WINDOW *win, Choice *choice, int choice_amount, int *highlighted
 		}
 	}
 	return 2;
-}
-
-
-void drawSalt(int amount) {
-	int scr_h, scr_w;
-	int x, y;
-
-	getmaxyx(stdscr, scr_h, scr_w);
-
-	time_t t;
-	srand((unsigned) time(&t));
-
-	for (int i = 0; i < amount; i++) {
-		x = rand() % scr_w;
-		y = rand() % scr_w;
-
-		mvprintw(y, x, "·");
-	}
 }
 
 

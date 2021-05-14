@@ -64,9 +64,9 @@ int checkDependencies() {
 	char *base_error = "is not installed or not able to be accessed";
 	depend_size = sizeof dependencies / sizeof *dependencies;
 
-	returned = 1;
+	returned = 0;
 	for (int i = 0; i < depend_size; i++) {
-		if (system(concat(2, dependencies[i], " &>/dev/null")) != 0) {
+		if (system(concat(3, "which ", dependencies[i], " >/dev/null 2>&1")) != 0) {
 			fprintf(stderr, "%s %s\n", dependencies[i], base_error);
 			returned = 1;
 		}
