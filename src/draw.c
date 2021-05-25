@@ -225,25 +225,25 @@ int handleInput(WINDOW *win, Choice *choice, int choice_amount, int *highlighted
 	switch (input) {
     case KEY_UP:
 		if (*highlighted != 0) {
-			*highlighted = *highlighted - 1;
+			*highlighted -= 1;
 		}
 		break;
 
     case KEY_DOWN:
 		if (*highlighted != choice_amount) {
-			*highlighted = *highlighted + 1;
+			*highlighted += 1;
 		}
 		break;
 
     case 'k':
 		if (*highlighted != 0) {
-			*highlighted = *highlighted - 1;
+			*highlighted -= 1;
 		}
 		break;
 
     case 'j':
 		if (*highlighted != choice_amount) {
-			*highlighted = *highlighted + 1;
+			*highlighted += 1;
 		}
 		break;
 
@@ -271,7 +271,7 @@ int handleInput(WINDOW *win, Choice *choice, int choice_amount, int *highlighted
 		return 0;
 }
 
-	if (input == 10 || input == ' ') { // Ebter or space
+	if (input == 10 || input == ' ') { // Enter or space
 		if (*highlighted == -1) {
 			for (int i = 0; i < choice_amount; i++) {
 				if (!choice[i].is_submenu) {

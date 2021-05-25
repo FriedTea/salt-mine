@@ -1,35 +1,114 @@
+#define _XOPEN_SOURCE 500
+
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <ncurses.h>
 #include <string.h>
 #include <locale.h>
 #include <unistd.h>
+#include <ncurses.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include "draw.h"
 #include "suckless.h"
 #include "fonts.h"
 #include "util.h"
 
 
-void dotfiles() {
-	int error;
-	char *url = "https://gitlab.com/FriedTeaCP/dotfiles.git";
-	char *path = concat(2, getenv("HOME"), "/.local/dots/");
-	printf("Cloning dotfiles\n");
-	error = cloneRepo(url, path, 1);
-	if (error > 0)
-		printf("Failed to clone or checkout repository\n");
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+    int rv = remove(fpath);
 
-	// Replace with checkout function
-	// git --git-dir=$HOME/.local/dots --work-tree=$HOME
-    char *checkout_cmd = "\
-git --git-dir=$HOME/.local/dots --work-tree=$HOME checkout ||\
-echo 'Backing up existing dotfiles' && mkdir --verbose $HOME/dot-backup &&\
-git --git-dir=$HOME/.local/dots --work-tree=$HOME checkout 2>&1 | grep -E \"\\s+\\.\" | awk {'print $1'} | xargs -I{} mv --verbose {} $HOME/dot-backup/;\
-git --git-dir=$HOME/.local/dots --work-tree=$HOME config --local status.showUntrackedFile no &&\
-echo 'Succesfully installed dotfiles' || echo 'Failed to install dotfiles'";
-	system(checkout_cmd);
+    if (rv)
+        perror(fpath);
 
+    return rv;
 }
+
+
+void gitdirRename(char *gitdir, char *targetdir) {
+	if (!checkDir(targetdir)) {
+		mkdirR(targetdir);
+	}
+
+	char *targetfile;
+	char *gitfile;
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir (gitdir)) != NULL) {
+	  while ((ent = readdir (dir)) != NULL) {
+		if (
+				strcmp(ent->d_name, "..") == 0
+				||
+				strcmp(ent->d_name, ".") == 0
+			) {
+			continue;
+		}
+
+		targetfile = (char *)malloc(strlen(ent->d_name)+strlen(targetdir));
+		gitfile = (char *)malloc(strlen(ent->d_name)+strlen(gitdir));
+
+		sprintf(targetfile, "%s/%s", targetdir, ent->d_name);
+		sprintf(gitfile, "%s/%s", gitdir, ent->d_name);
+
+		if (strcmp(ent->d_name, ".git") == 0) {
+			nftw(gitfile, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+			printf("Removed %s\n", gitfile);
+		}
+		else {
+			rename(gitfile, targetfile);
+			printf("%s -> %s\n", gitfile, targetfile);
+		}
+	  }
+
+	  closedir (dir);
+	} else {
+	  fprintf(stderr, "Could not access directory\n");
+	}
+
+	free(targetfile);
+	free(gitfile);
+}
+
+
+void dotfiles() {
+	char *url = "https://gitlab.com/FriedTeaCP/dotfiles.git";
+	char *home = getenv("HOME");
+	char *path = concat(2, home, "/.local/dots/");
+	char *tmp_path = concat(2, home, "/tmp-gitdir");
+
+	printf("Cloning temporary dotfiles repository...\n");
+	if (cloneRepo(url, tmp_path, 0) <= 0) {
+		printf("Cloned temporary dotfiles repository!\n");
+		printf("Moving files...\n");
+		gitdirRename(tmp_path, home);
+		printf("Moved files!\n");
+
+		printf("Removing temporary dotfiles repository...\n");
+		if (remove(tmp_path) == 0) {
+			printf("Removed temporary dotfiles repository!\n");
+		}
+		else {
+			printf("Failed to remove temporary dotfiles repository!\n");
+		}
+	}
+	else {
+		printf("Failed to clone temporary dotfiles repository!\n");
+	}
+
+
+	printf("Cloning bare dotfiles repository...\n");
+	if (cloneRepo(url, path, 1) <= 0) {
+		printf("Cloned bare dotfiles repository!\n");
+	}
+	else {
+		printf("Failed to clone bare dotfiles repository!\n");
+	}
+}
+
+
+
+
+
 
 void Wallpapers() {
 	char *base_path = concat(2, getenv("HOME"), "/.local/rice/Wallpapers/");

@@ -9,16 +9,14 @@ Automatically download my salty dotfiles
 * libgit2
 
 ## Runtime Dependencies
-* tar
-* patch
-* git (for git checkout)
+* tar (For extracting tar.gz files)
+* patch (For patching suckless builds)
 
 
 ## TODO
-- [ ] Implement checkout function for cloning dotfiles
+- [X] Implement checkout function for cloning dotfiles (Kind of, found a workaround)
 - [X] Implement cloning Suckless Utilites
 - [ ] Implement building Suckless Utilites
-- [ ] Use su -c instead of sudo for building
 - [X] Fix fonts
 - [X] Fix herbe
 - [X] Add submenus (Sukless utilites and fonts)
