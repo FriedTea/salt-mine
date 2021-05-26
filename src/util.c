@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <glob.h>
 #include <git2.h>
 #include <sys/stat.h>
 #include <curl/curl.h>
@@ -8,25 +9,26 @@
 #include "mine.h"
 
 
-
-void lastElement(char **ptr, char *str, char *delimiter) {
+void lastElement(char **ptr, char *str, char *delimiter)
+{
 	char *str_copy = strdup(str);
-
-	char *token = strtok(str_copy, delimiter);
-	while (token != NULL) {
-		token = strtok(NULL, delimiter);
-		if (token != NULL) {
+	char *token;
+	while ((token = strtok_r(str_copy, delimiter, &str_copy)))
+	{
+		if (token)
+		{
 			*ptr = strdup(token);
 		}
 	}
-	free(str_copy);
 }
 
 
-int mkdirR(char *dir) {
+int mkdirR(char *dir)
+{
 	struct stat s;
 	stat(dir, &s);
-	if (S_ISDIR(s.st_mode)) {
+	if (S_ISDIR(s.st_mode))
+	{
 		return 0;
 	}
 
@@ -34,7 +36,8 @@ int mkdirR(char *dir) {
 	char *partial_dir = strtok(dir_copy, "/");
 	char *complete_dir = malloc(strlen(dir)*sizeof(char)+1);
 	strcpy(complete_dir, "/");
-	while (partial_dir != NULL) {
+	while (partial_dir != NULL)
+	{
 		strcat(complete_dir, partial_dir);
 		strcat(complete_dir, "/");
 		mkdir(complete_dir, 0777);
@@ -49,13 +52,15 @@ int mkdirR(char *dir) {
 }
 
 
-int curlFile(char *url, char *filename) {
+int curlFile(char *url, char *filename)
+{
 	CURL *curl;
 	FILE *file;
 	CURLcode res;
 
 	curl = curl_easy_init();
-	if (curl) {
+	if (curl)
+	{
 		file = fopen(filename, "w");
 		curl_easy_setopt(curl, CURLOPT_URL, url);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
@@ -65,7 +70,8 @@ int curlFile(char *url, char *filename) {
 		fclose(file);
 	}
 
-	if (res <= 0) {
+	if (res <= 0)
+	{
 		printf("Downloaded %s\n", filename);
 	}
 
@@ -74,7 +80,8 @@ int curlFile(char *url, char *filename) {
 
 
 
-char *curlData(char *url) {
+char *curlData(char *url)
+{
 	CURL *curl;
 	FILE *stream;
 	char *str;
@@ -98,14 +105,16 @@ char *curlData(char *url) {
 }
 
 
-int cloneRepo(char *url, char *path, int bare) {
+int cloneRepo(char *url, char *path, int bare)
+{
 	int error;
 	git_libgit2_init();
 
 	git_repository *repo = NULL;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
-	if (bare == 1) {
+	if (bare) // if (bare == positive int)
+	{
 		opts.bare = 1;
 	}
 
@@ -114,7 +123,8 @@ int cloneRepo(char *url, char *path, int bare) {
 }
 
 
-int checkDir(char *dir) {
+int checkDir(char *dir)
+{
 	struct stat s;
 	stat(dir, &s);
 	if (S_ISDIR(s.st_mode))
@@ -124,7 +134,8 @@ int checkDir(char *dir) {
 }
 
 
-char *concat(int strings, ...) {
+char *concat(int strings, ...)
+{
 	va_list list;
 	va_start(list, strings);
 
@@ -134,7 +145,8 @@ char *concat(int strings, ...) {
 
 
 	stream = open_memstream(&str, &size);
-	for (int i = 0; i < strings; i++) {
+	for (int i = 0; i < strings; i++)
+	{
 		fprintf(stream, "%s", va_arg(list, char *));
 	}
 	fclose(stream);
@@ -144,7 +156,8 @@ char *concat(int strings, ...) {
 };
 
 
-char *catchCommand(const char *cmd) {
+char *catchCommand(const char *cmd)
+{
 	char *str = malloc(1);
 	char c;
 	FILE *stream;
@@ -153,7 +166,8 @@ char *catchCommand(const char *cmd) {
 	str[0] = fgetc(stream);
 
 	int counter = 0;
-	while ((c = fgetc(stream)) != EOF) {
+	while ((c = fgetc(stream)) != EOF)
+	{
 		str = (char*)realloc(str, strlen(str)+1);
 		counter++;
 		str[counter] = c;
@@ -164,3 +178,32 @@ char *catchCommand(const char *cmd) {
 	pclose(stream);
 	return str;
 };
+
+
+int checkDependency(char *program)
+{
+	char *path = strdup(getenv("PATH"));
+	char *dir;
+
+	dir = strtok(path, ":");
+	char *glob_str;
+	while (dir != NULL)
+	{
+		glob_str = (char *) malloc(strlen(dir) + strlen(program) + 3);
+		sprintf(glob_str, "%s/%s", dir, program);
+
+		glob_t globtmp;
+		if (glob(glob_str, 0, NULL, &globtmp) == 0)
+		{
+			globfree(&globtmp);
+			free(path);
+			return 1;
+		}
+
+		dir = strtok(NULL, ":");
+	}
+	free(path);
+
+	return 0;
+}
+

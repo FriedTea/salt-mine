@@ -19,5 +19,6 @@ int cloneRepo(char *url, char *path, int bare);
 int extractArchive(FILE *file);
 char *concat(int strings, ...);
 char *catchCommand(const char *cmd);
+int checkDependency(char *program);
 
 #endif // UTIL_H

@@ -15,7 +15,30 @@
 #include "util.h"
 
 
-int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+int checkOS()
+{
+    #ifdef __linux__
+    return 1;
+
+    #elif __APPLE__ || __MACH__
+    return 1;
+
+    #elif __FreeBSD__
+    return 1;
+
+    #elif __unix || __unix__
+    return 1;
+
+    #else
+    return 0;
+
+    #endif
+}
+
+
+// Found in stack overflow
+int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
     int rv = remove(fpath);
 
     if (rv)
@@ -25,8 +48,10 @@ int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW
 }
 
 
-void gitdirRename(char *gitdir, char *targetdir) {
-	if (!checkDir(targetdir)) {
+void gitdirRename(char *gitdir, char *targetdir)
+{
+	if (!checkDir(targetdir))
+	{
 		mkdirR(targetdir);
 	}
 
@@ -34,13 +59,16 @@ void gitdirRename(char *gitdir, char *targetdir) {
 	char *gitfile;
 	DIR *dir;
 	struct dirent *ent;
-	if ((dir = opendir (gitdir)) != NULL) {
-	  while ((ent = readdir (dir)) != NULL) {
+	if ((dir = opendir (gitdir)) != NULL)
+	{
+	  while ((ent = readdir (dir)) != NULL)
+	  {
 		if (
-				strcmp(ent->d_name, "..") == 0
-				||
-				strcmp(ent->d_name, ".") == 0
-			) {
+			strcmp(ent->d_name, "..") == 0
+			||
+			strcmp(ent->d_name, ".") == 0
+			)
+		{
 			continue;
 		}
 
@@ -50,18 +78,20 @@ void gitdirRename(char *gitdir, char *targetdir) {
 		sprintf(targetfile, "%s/%s", targetdir, ent->d_name);
 		sprintf(gitfile, "%s/%s", gitdir, ent->d_name);
 
-		if (strcmp(ent->d_name, ".git") == 0) {
+		if (strcmp(ent->d_name, ".git") == 0)
+		{
 			nftw(gitfile, unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
 			printf("Removed %s\n", gitfile);
-		}
-		else {
+		} else
+		{
 			rename(gitfile, targetfile);
 			printf("%s -> %s\n", gitfile, targetfile);
 		}
 	  }
 
 	  closedir (dir);
-	} else {
+	} else
+	{
 	  fprintf(stderr, "Could not access directory\n");
 	}
 
@@ -70,47 +100,48 @@ void gitdirRename(char *gitdir, char *targetdir) {
 }
 
 
-void dotfiles() {
+void dotfiles()
+{
 	char *url = "https://gitlab.com/FriedTeaCP/dotfiles.git";
 	char *home = getenv("HOME");
 	char *path = concat(2, home, "/.local/dots/");
 	char *tmp_path = concat(2, home, "/tmp-gitdir");
 
 	printf("Cloning temporary dotfiles repository...\n");
-	if (cloneRepo(url, tmp_path, 0) <= 0) {
+	if (cloneRepo(url, tmp_path, 0) <= 0)
+	{
 		printf("Cloned temporary dotfiles repository!\n");
 		printf("Moving files...\n");
 		gitdirRename(tmp_path, home);
 		printf("Moved files!\n");
 
 		printf("Removing temporary dotfiles repository...\n");
-		if (remove(tmp_path) == 0) {
+		if (remove(tmp_path) == 0)
+		{
 			printf("Removed temporary dotfiles repository!\n");
-		}
-		else {
+		} else
+		{
 			printf("Failed to remove temporary dotfiles repository!\n");
 		}
-	}
-	else {
+	} else
+	{
 		printf("Failed to clone temporary dotfiles repository!\n");
 	}
 
 
 	printf("Cloning bare dotfiles repository...\n");
-	if (cloneRepo(url, path, 1) <= 0) {
+	if (cloneRepo(url, path, 1) <= 0)
+	{
 		printf("Cloned bare dotfiles repository!\n");
-	}
-	else {
+	} else
+	{
 		printf("Failed to clone bare dotfiles repository!\n");
 	}
 }
 
 
-
-
-
-
-void Wallpapers() {
+void Wallpapers()
+{
 	char *base_path = concat(2, getenv("HOME"), "/.local/rice/Wallpapers/");
 	if (mkdirR(base_path))
 		printf("Made directory %s\n", base_path);
@@ -121,7 +152,8 @@ void Wallpapers() {
 };
 
 
-int maxChoiceLen(Choice choice[], int choice_amount) {
+int maxChoiceLen(Choice choice[], int choice_amount)
+{
 	int max = 0;
 	for (int i = 0; i < choice_amount; i++)
 		if (strlen(choice[i].name) > max)
@@ -131,38 +163,19 @@ int maxChoiceLen(Choice choice[], int choice_amount) {
 }
 
 
-int checkDependencies() {
-	int returned;
-	int depend_size;
-	char *dependencies[] = {
-		"git",
-		"tar",
-		"patch"
-	};
-
-	char *base_error = "is not installed or not able to be accessed";
-	depend_size = sizeof dependencies / sizeof *dependencies;
-
-	returned = 0;
-	for (int i = 0; i < depend_size; i++) {
-		if (system(concat(3, "which ", dependencies[i], " >/dev/null 2>&1")) != 0) {
-			fprintf(stderr, "%s %s\n", dependencies[i], base_error);
-			returned = 1;
-		}
-	}
-
-	return returned;
-}
-
-
-int main() {
-	int choice_amount;
-
-	if (checkDependencies() == 1) {
+int main()
+{
+	if (!checkOS())
+	{
+		printf("Operating system is not supported\n");
 		return 1;
 	}
 
-	Choice main_choice[4] = {
+	int choice_amount;
+
+
+	Choice main_choice[4] =
+	{
 	  {"Dotfiles", dotfiles, 0},
 	  {"Wallpapers", Wallpapers, 0},
 	  {"Suckless Utilites", installSuckless, 1, drawSuckless},
@@ -182,23 +195,25 @@ int main() {
 	int counter = 0;
 	int input_ret;
 	int success = 0;
-	while (1) {
-	drawAll(win, main_choice, choice_amount, &highlighted, &counter, 0);
+	while (1)
+	{
+		drawAll(win, main_choice, choice_amount, &highlighted, &counter, 0);
 
-	input_ret = handleInput(win, main_choice, choice_amount, &highlighted);
+		input_ret = handleInput(win, main_choice, choice_amount, &highlighted);
 
-	if (input_ret == 0) //quit
-	  break;
+		if (input_ret == 0) //quit
+		  break;
 
-	if (input_ret == 1) { //continue/back
-	  success = 1;
-	  break;
-	}
-
+		if (input_ret == 1)
+		{ //continue/back
+		  success = 1;
+		  break;
+		}
 	}
 
 	endwin();
-	if (success == 1) {
+	if (success == 1)
+	{
 		for (int i = 0; i < choice_amount; i++)
 			if (main_choice[i].toggled || main_choice[i].is_submenu)
 				main_choice[i].exec();

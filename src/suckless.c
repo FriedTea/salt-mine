@@ -1,19 +1,22 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "util.h"
 #include "mine.h"
 #include "draw.h"
 
 
 // Function to clone personal repositories
-int cloneSuckless(char *program) {
+int cloneSuckless(char *program)
+{
 	char *path = concat(3, getenv("HOME"), "/.local/rice/", program);
 	char *base_url = "https://gitlab.com/FriedTeaCP/tea-";
 
 	// https://gitlab.com/FriedTeaCP/tea-${PROGRAM}.git
 	char *url = concat(3, base_url, program, ".git");
-	if (cloneRepo(url, path, 0) <= 0) {
+	if (cloneRepo(url, path, 0) <= 0)
+	{
 		printf("Cloned %s\n", program);
 	}
 	return 0;
@@ -22,28 +25,45 @@ int cloneSuckless(char *program) {
 
 // Function to download, extract, and patch, other programs
 // That aren't in personal repositories
-void downloadMisc(char *url, char **patches, int patches_amount) {
+void downloadMisc(char *url, char **patches, int patches_amount)
+{
 	char *dir = concat(2, getenv("HOME"), "/.local/rice/"); // $HOME/.local/rice/
 
 	char *basename;
 	lastElement(&basename, url, "/");
 	char *tar_path = concat(2, dir, basename);
 
+	if (checkDependency("tar") == 0)
+	{
+		fprintf(stderr, "Tar is not installed, will not download %s\n", basename);
+		free(basename);
+		return ;
+	}
+
 	mkdirR(dir);
 	curlFile(url, concat(2, dir, basename));
 
 	// tar xf /dir/herbe.tar.gz -C $dir
-	puts("extract");
-	char *extract = concat(4, "tar xf ", tar_path, " -C ", dir);
+	/* char *extract = concat(4, "tar xf ", tar_path, " -C ", dir); */
+	char *extract = malloc(50 + strlen(tar_path) + strlen(dir));
+	sprintf(extract, "tar xf %s -C %s", tar_path, dir);
 	system(extract);
 
+	if (checkDependency("patch") == 0)
+	{
+		fprintf(stderr, "patch is not installed, will not download patches\n");
+		free(basename);
+		return ;
+	}
 	// Download and patch a patch
-	if (patches_amount != 0) {
+	if (patches_amount != 0)
+	{
 		// Finds the directory where the files are going to be extracted to
 		char *tarDir = catchCommand(concat(4, "tar tf ", dir, basename, " | head -n1"));
 		char *current_patch;
 		printf("Downloading patches\n");
-		for (int i = 0; i < patches_amount; i++) {
+		for (int i = 0; i < patches_amount; i++)
+		{
 			lastElement(&current_patch, patches[i], "/");
 			curlFile(patches[i], concat(3, dir, tarDir, current_patch));
 			printf("Patching %s\n", current_patch);
@@ -54,7 +74,8 @@ void downloadMisc(char *url, char **patches, int patches_amount) {
 		printf("Finished patching\n");
 	}
 
-	if (remove(tar_path)) {
+	if (remove(tar_path))
+	{
 		printf("Removed %s\n", tar_path);
 	}
 
@@ -68,9 +89,11 @@ void dmenu() {cloneSuckless("dmenu");}
 void dwmblocks() {cloneSuckless("dwmblocks");}
 
 
-void herbe() {
+void herbe()
+{
 	char *url = "https://github.com/dudik/herbe/archive/1.0.0.tar.gz";
-	char *patches[] = {
+	char *patches[] =
+	{
 		"https://patch-diff.githubusercontent.com/raw/dudik/herbe/pull/11.diff",
 		"https://patch-diff.githubusercontent.com/raw/dudik/herbe/pull/19.diff"
 	};
@@ -79,7 +102,8 @@ void herbe() {
 }
 
 
-void slock() {
+void slock()
+{
 	char *url = "https://dl.suckless.org/tools/slock-1.4.tar.gz";
 	char *patches[] = {
 		"https://tools.suckless.org/slock/patches/message/slock-message-20191002-b46028b.diff",
@@ -90,13 +114,15 @@ void slock() {
 }
 
 
-void devour() {
+void devour()
+{
 	char *url = "https://github.com/salman-abedin/devour/archive/refs/tags/12.tar.gz";
 	downloadMisc(url, NULL, 0);
 }
 
 
-Choice suckless[7] = {
+Choice suckless[7] =
+{
 	{"Dynamic Window Manager (dwm)", dwm, 0},
 	{"Simple Terminal (st)", st, 0},
 	{"Dmenu", dmenu, 0},
@@ -116,7 +142,8 @@ int drawSuckless(WINDOW *win) {
 	int counter = 0;
 	int highlighted = 0;
 	int input_ret;
-	while (1) {
+	while (1)
+	{
 		drawAll(win, suckless, choice_amount, &highlighted, &counter, 1);
 
 		input_ret = handleInput(win, suckless, choice_amount, &highlighted);
@@ -132,10 +159,45 @@ int drawSuckless(WINDOW *win) {
 
 // Function to install selected/toggled suckless utilites
 void installSuckless() {
+	int suckless_toggled = 0;
 	int repo_len = sizeof suckless / sizeof *suckless;
-	for (int i = 0; i < repo_len; i++) {
-		if (suckless[i].toggled) {
+	for (int i = 0; i < repo_len; i++)
+	{
+		if (suckless[i].toggled)
+		{
+			suckless_toggled = 1;
 			suckless[i].exec();
 		}
+	}
+
+
+	if (checkDependency("make") && suckless_toggled)
+	{
+		printf("\n\n! ---------------------------------------------------------- !\n");
+		printf("Do you wish to compile all of the downloaded utilites as root?\n[yes/no] ");
+
+		char str[4];
+		fgets(str, 4, stdin);
+		for (int i = 0; i < 4; i++)
+		{
+			str[i] = tolower(str[i]);
+		}
+
+		if (*str == '\n' || strcmp(str, "yes") == 0) // If first character is a newline/Enter
+		{
+			printf("Compiling\n");
+			char *home = getenv("HOME");
+			char *cmd = malloc(strlen(home)+100);
+			//su -c 'for dir in $HOME/.local/rice/*/*[Mm]akefile; do make install -C $(dirname $dir); done'
+			sprintf(cmd, "su -c 'for dir in %s/.local/rice/*/*[Mm]akefile; do make install -C $(dirname $dir); done'", home);
+			system(cmd);
+			free(cmd);
+		} else
+		{
+			printf("Will not compile.\n");
+		}
+	} else
+	{
+		printf("Make is not installed, will not compile.\n");
 	}
 }
